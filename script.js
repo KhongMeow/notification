@@ -1,45 +1,52 @@
-const ensureSupport = () => {
-    if (!('serviceWorker' in navigator)) throw new Error("No support for Service Worker");
-    if (!('Notification' in window)) throw new Error("No support for Notification API");
-};
+async function ensureSupport() {
+  if (!('serviceWorker' in navigator)) {
+    alert('Service Worker not supported');
+    return false;
+  }
+  if (!('Notification' in window)) {
+    alert('Notification API not supported');
+    return false;
+  }
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    alert('Must be served over HTTPS or localhost');
+    return false;
+  }
+  return true;
+}
 
-const registerSW = async () => {
-    return navigator.serviceWorker.register('sw.js'); // ensure sw.js is in the same folder or adjust path
-};
+async function registerSW() {
+  try {
+    // Keep sw.js at your web root or adjust scope as needed
+    return await navigator.serviceWorker.register('sw.js', { scope: './' });
+  } catch (e) {
+    console.error('SW registration failed:', e);
+    return null;
+  }
+}
 
-const requestNotificationPermission = async () => {
-    if (Notification.permission === 'granted') return true;
-    if (Notification.permission === 'denied') return false;
-    // Must be called from a user gesture on Android 13+
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-};
+async function enableNotifications() {
+  if (!(await ensureSupport())) return;
 
-const showLocalNotification = async (title, options = {}) => {
-    const registration = await navigator.serviceWorker.ready;
-    return registration.showNotification(title, options);
-};
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    console.warn('Notification permission not granted');
+    return;
+  }
 
-// Call this from a user gesture (e.g., button click)
-export const notify = async () => {
-    try {
-        ensureSupport();
-        await registerSW();
-        const granted = await requestNotificationPermission();
-        if (!granted) throw new Error("Notification permission not granted");
-        await showLocalNotification("Hello world", {
-            body: "It works on Android",
-            icon: "/icon-192.png", // update path to an existing icon
-            vibrate: [100, 50, 100],
-        });
-    } catch (err) {
-        console.error(err);
-        alert(err.message);
-    }
-};
+  const reg = (await navigator.serviceWorker.getRegistration()) || (await registerSW());
+  if (!reg) return;
 
-// Example: attach to a button with id="notify-btn"
-document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('notify-btn');
-    if (btn) btn.addEventListener('click', notify);
-});
+  await reg.showNotification('Hello world', {
+    body: 'Works on more devices via Service Worker',
+    tag: 'hello',
+    renotify: false,
+    icon: '/icon.png',
+    badge: '/badge.png',
+  });
+
+  alert('Notification sent');
+}
+
+// Call this from a user gesture (e.g., a button)
+// <button id="enable-notifications">Enable notifications</button>
+document.getElementById('enable-notifications')?.addEventListener('click', enableNotifications);
