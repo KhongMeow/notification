@@ -1,9 +1,25 @@
+const isiOS = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true;
+
+const notificationsSupported = () =>
+  ('serviceWorker' in navigator) &&
+  (('Notification' in window) || ('showNotification' in ServiceWorkerRegistration.prototype));
+
 const checkPermission = () => {
     if (!('serviceWorker' in navigator)) {
         throw new Error("No support for service worker!");
     }
-    if (!('Notification' in window)) {
-        throw new Error("No support for notification API");
+    // iOS requires an installed Home Screen app
+    if (isiOS() && !isStandalone()) {
+        throw new Error("On iOS, enable notifications by adding this app to the Home Screen, then open it from there.");
+    }
+    if (!notificationsSupported()) {
+        throw new Error("Notifications are not supported on this browser/device.");
     }
     if (!(window.isSecureContext || location.hostname === 'localhost')) {
         throw new Error("Notifications require HTTPS or localhost.");
@@ -11,6 +27,7 @@ const checkPermission = () => {
 };
 
 const registerSW = async () => {
+    // Keep SW at site root for widest scope on GitHub Pages
     const registration = await navigator.serviceWorker.register('sw.js');
     return registration;
 };
@@ -30,14 +47,11 @@ const enableNotifications = async () => {
     await navigator.serviceWorker.ready;
     await requestNotificationPermission();
 
-    // Use the SW to show the notification (more reliable on mobile)
-    await reg.showNotification("Hello world", {
+    await reg.showNotification("Meow...!", {
         body: "Shown via ServiceWorkerRegistration.showNotification",
-        // icon: "/icon.png" // optional
     });
 };
 
-// Wire to a user gesture instead of auto-running
 document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('enable-notifications');
     if (btn) {
