@@ -17,9 +17,10 @@ const requestNotificationPermission = async () => {
         alert("Notification permission not granted");
         throw new Error("Notification permission not granted")
     } else {
+        alert(permission);
+        alert("Notification permission granted");
         new Notification ("Hello world");
     }
-    alert(permission);
     
 }
 checkPermission()
