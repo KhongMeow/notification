@@ -33,7 +33,7 @@ const enableNotifications = async () => {
     // Use the SW to show the notification (more reliable on mobile)
     await reg.showNotification("Hello world", {
         body: "Shown via ServiceWorkerRegistration.showNotification",
-        icon: "/icon.png" // optional
+        // icon: "/icon.png" // optional
     });
 };
 
